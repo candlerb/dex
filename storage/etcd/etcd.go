@@ -531,3 +531,7 @@ func keyEmail(prefix, email string) string { return prefix + strings.ToLower(ema
 func keySession(prefix, userID, connID string) string {
 	return prefix + strings.ToLower(userID+"|"+connID)
 }
+
+func (c *conn) GetMembership(connector, subject string, is_group bool) (storage.Membership, error) {
+	return storage.Membership{}, storage.ErrNotFound
+}

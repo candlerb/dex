@@ -465,3 +465,7 @@ func (s *memStorage) UpdateConnector(id string, updater func(c storage.Connector
 	})
 	return
 }
+
+func (c *memStorage) GetMembership(connector, subject string, is_group bool) (storage.Membership, error) {
+	return storage.Membership{}, storage.ErrNotFound
+}

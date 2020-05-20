@@ -216,6 +216,23 @@ func serve(cmd *cobra.Command, args []string) error {
 
 	s = storage.WithStaticConnectors(s, storageConnectors)
 
+	if len(c.StaticMemberships) > 0 {
+		for _, membership := range c.StaticMemberships {
+			if membership.ConnectorID == "" {
+				return fmt.Errorf("invalid config: Membership must have connector ID")
+			}
+			// TODO: check if it is a known connector
+			if membership.SubjectID == "" {
+				return fmt.Errorf("invalid config: Membership must have subject ID")
+			}
+			if len(membership.Groups) == 0 {
+				return fmt.Errorf("invalid config: Membership requires non-empty list of groups")
+			}
+			logger.Infof("config static membership: %v %v %v", membership.ConnectorID, membership.SubjectID, membership.IsGroup)
+		}
+		s = storage.WithStaticMemberships(s, c.StaticMemberships, logger)
+	}
+
 	if len(c.OAuth2.ResponseTypes) > 0 {
 		logger.Infof("config response types accepted: %s", c.OAuth2.ResponseTypes)
 	}

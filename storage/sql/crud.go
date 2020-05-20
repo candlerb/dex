@@ -867,3 +867,7 @@ func (c *conn) delete(table, field, id string) error {
 	}
 	return nil
 }
+
+func (c *conn) GetMembership(connector, subject string, is_group bool) (storage.Membership, error) {
+	return storage.Membership{}, storage.ErrNotFound
+}

@@ -2,6 +2,7 @@ package storage
 
 import (
 	"errors"
+	"strconv"
 	"strings"
 
 	"github.com/dexidp/dex/pkg/log"
@@ -229,4 +230,36 @@ func (s staticConnectorsStorage) UpdateConnector(id string, updater func(old Con
 		return errors.New("static connectors: read-only cannot update connector")
 	}
 	return s.Storage.UpdateConnector(id, updater)
+}
+
+// staticMembershipStorage represents a storage with read-only set of groups.
+type staticMembershipsStorage struct {
+	Storage
+
+	// A read-only set of groups.
+	memberships         []Membership
+	membershipBySubject map[[3]string]Membership
+}
+
+// WithStaticMemberships returns a storage with a read-only set of Memberships. Write actions,
+// such as updating existing Memberships, will fail.
+func WithStaticMemberships(s Storage, staticMemberships []Membership, logger log.Logger) Storage {
+	membershipBySubject := make(map[[3]string]Membership)
+	for _, m := range staticMemberships {
+		key := [3]string{m.ConnectorID, m.SubjectID, strconv.FormatBool(m.IsGroup)}
+		if _, ok := membershipBySubject[key]; ok {
+			logger.Errorf("Attempting to create StaticMemberships with the same subject: %v", key)
+		}
+		membershipBySubject[key] = m
+	}
+	return staticMembershipsStorage{s, staticMemberships, membershipBySubject}
+}
+
+func (s staticMembershipsStorage) GetMembership(connector, subject string, is_group bool) (Membership, error) {
+	key := [3]string{connector, subject, strconv.FormatBool(is_group)}
+	if membership, ok := s.membershipBySubject[key]; ok {
+		return membership, nil
+	}
+	//return s.Storage.GetMembershipBySubject(subject)
+	return Membership{}, ErrNotFound
 }

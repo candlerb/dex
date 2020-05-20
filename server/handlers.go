@@ -485,6 +485,9 @@ func (s *Server) finalizeLogin(identity connector.Identity, authReq storage.Auth
 		EmailVerified:     identity.EmailVerified,
 		Groups:            identity.Groups,
 	}
+	if err := s.updateGroups(&claims, authReq.ConnectorID); err != nil {
+		return "", fmt.Errorf("failed to update groups: %v", err)
+	}
 
 	updater := func(a storage.AuthRequest) (storage.AuthRequest, error) {
 		a.LoggedIn = true
@@ -1052,6 +1055,11 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
 		EmailVerified:     ident.EmailVerified,
 		Groups:            ident.Groups,
 	}
+	if err := s.updateGroups(&claims, refresh.ConnectorID); err != nil {
+		s.logger.Errorf("Failed to update groups: %v", err)
+		s.tokenErrHelper(w, errServerError, "", http.StatusInternalServerError)
+		return
+	}
 
 	accessToken, err := s.newAccessToken(client.ID, claims, scopes, refresh.Nonce, refresh.ConnectorID)
 	if err != nil {
@@ -1241,6 +1249,11 @@ func (s *Server) handlePasswordGrant(w http.ResponseWriter, r *http.Request, cli
 		EmailVerified:     identity.EmailVerified,
 		Groups:            identity.Groups,
 	}
+	if err := s.updateGroups(&claims, connID); err != nil {
+		s.logger.Errorf("failed to update groups: %v", err)
+		s.tokenErrHelper(w, errServerError, "", http.StatusInternalServerError)
+		return
+	}
 
 	accessToken := storage.NewID()
 	idToken, expiry, err := s.newIDToken(client.ID, claims, scopes, nonce, accessToken, connID)
@@ -1414,4 +1427,35 @@ func usernamePrompt(conn connector.PasswordConnector) string {
 		return attr
 	}
 	return "Username"
+}
+
+// Update groups claim using Dex memberships
+func (s *Server) updateGroups(claims *storage.Claims, connectorID string) error {
+	new_groups := make([]string, 0)
+	res, err := s.storage.GetMembership(connectorID, claims.UserID, false)
+	if err == nil {
+		new_groups = append(new_groups, res.Groups...)
+	} else if err != storage.ErrNotFound {
+		return err
+	}
+	for _, group := range claims.Groups {
+		res, err = s.storage.GetMembership(connectorID, group, true)
+		if err == nil {
+			new_groups = append(new_groups, res.Groups...)
+		} else if err != storage.ErrNotFound {
+			return err
+		}
+	}
+	//DEDUPE: claims.Groups = append(claims.Groups, new_groups...)
+	seen := make(map[string]bool)
+	for _, group := range claims.Groups {
+		seen[group] = true
+	}
+	for _, group := range new_groups {
+		if !seen[group] {
+			claims.Groups = append(claims.Groups, group)
+			seen[group] = true
+		}
+	}
+	return nil
 }

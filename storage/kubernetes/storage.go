@@ -595,3 +595,7 @@ func (cli *client) GarbageCollect(now time.Time) (result storage.GCResult, err e
 	}
 	return result, delErr
 }
+
+func (cli *client) GetMembership(connector, subject string, is_group bool) (storage.Membership, error) {
+	return storage.Membership{}, storage.ErrNotFound
+}

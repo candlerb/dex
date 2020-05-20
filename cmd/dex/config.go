@@ -39,6 +39,10 @@ type Config struct {
 	// querying the storage. Write operations, like creating a client, will fail.
 	StaticClients []storage.Client `json:"staticClients"`
 
+	// StaticMemberships cause the server to use a built-in set of user/group
+	// memberships. (TODO: add to various storage interfaces)
+	StaticMemberships []storage.Membership `json:"memberships"`
+
 	// If enabled, the server will maintain a list of passwords which can be used
 	// to identify a user.
 	EnablePasswordDB bool `json:"enablePasswordDB"`

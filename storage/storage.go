@@ -65,6 +65,8 @@ type Storage interface {
 	GetPassword(email string) (Password, error)
 	GetOfflineSessions(userID string, connID string) (OfflineSessions, error)
 	GetConnector(id string) (Connector, error)
+	// EXPERIMENTAL
+	GetMembership(connector, subject string, is_group bool) (Membership, error)
 
 	ListClients() ([]Client, error)
 	ListRefreshTokens() ([]RefreshToken, error)
@@ -318,6 +320,17 @@ type Connector struct {
 	// Config holds all the configuration information specific to the connector type. Since there
 	// no generic struct we can use for this purpose, it is stored as a byte stream.
 	Config []byte `json:"email"`
+}
+
+// Membership is an object which contains data about the additional groups that a subject
+// (user or group) belongs to.
+type Membership struct {
+	// The subject to which this membership applies
+	ConnectorID string `json:"connector"`
+	SubjectID   string `json:"subject"`
+	IsGroup     bool   `json:"is_group"`
+	// The additional groups which this subject belongs to
+	Groups []string `json:"groups"`
 }
 
 // VerificationKey is a rotated signing key which can still be used to verify
